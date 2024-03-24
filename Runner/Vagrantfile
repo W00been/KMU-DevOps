@@ -1,0 +1,57 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+VAGRANTFILE_API_VERSION = "2"
+
+# 환경 변수에서 등록 토큰 가져오기
+REGISTRATION_TOKEN = ENV['REGISTRATION_TOKEN'] || "default_token"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  # 전역 플러그인 설정
+  if Vagrant.has_plugin?("vagrant-vbguest")
+    config.vbguest.auto_update = false
+  end
+
+  # GitLab Runner VM 정의
+  config.vm.define "gitlab-runner" do |runner|
+    runner.vm.box = "ubuntu/jammy64"
+    runner.vm.hostname = "gitlab-runner"
+    runner.vm.network "private_network", ip: "192.168.33.12"
+    runner.vm.provider "virtualbox" do |vb|
+      vb.name = "gitlab-runner"
+      vb.memory = "2048"
+    end
+
+    # GitLab Runner 설치 쉘 스크립트
+    runner.vm.provision "shell", inline: <<-SHELL
+      sudo apt-get update
+      sudo apt-get install -y curl
+      
+      # GitLab Runner 다운로드 및 설치
+      sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64"
+      
+      # 실행 가능하게 만들기
+      sudo chmod +x /usr/local/bin/gitlab-runner
+      
+      # GitLab Runner 사용자 생성
+      sudo useradd --comment 'GitLab Runner' --create-home gitlab-runner --shell /bin/bash
+      
+      # GitLab Runner 서비스 등록 및 시작
+      sudo gitlab-runner install --user=gitlab-runner --working-directory=/home/gitlab-runner
+      sudo gitlab-runner start
+
+      # GitLab Runner 등록
+      sudo gitlab-runner register \
+        --non-interactive \
+        --url "http://192.168.33.44/" \
+        --registration-token "#{REGISTRATION_TOKEN}" \
+        --executor "shell" \
+        --description "shell-runner" \
+        --maintenance-note "Free-form maintainer notes about this runner" \
+        --tag-list "shell,aws" \
+        --run-untagged="true" \
+        --locked="false" \
+        --access-level="not_protected"
+    SHELL
+  end
+end
