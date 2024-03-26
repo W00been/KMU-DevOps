@@ -43,7 +43,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       # GitLab Runner 등록
       sudo gitlab-runner register \
         --non-interactive \
-        --url "http://192.168.33.44/" \
+        --url "http://192.168.33.10/" \
         --registration-token "#{REGISTRATION_TOKEN}" \
         --executor "shell" \
         --description "shell-runner" \
