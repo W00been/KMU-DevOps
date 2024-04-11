@@ -1,0 +1,10 @@
+---
+# tasks file for nginx
+- name: install nginx
+  apt: name=nginx state=present
+
+- name: replace index.html
+  template: src=index.html.j2 dest=/var/www/html/index.html
+
+- name: nginx start
+  service: name=nginx state=started enabled=yes
